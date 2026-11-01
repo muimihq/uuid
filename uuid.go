@@ -51,6 +51,10 @@ func (u UUID) Value() (driver.Value, error) {
 	return vU.String(), nil
 }
 
+func (u UUID) String() string {
+	return string(u)
+}
+
 // V7 generates a UUIDv7 represented as unpadded URL-safe base64.
 func V7() (UUID, error) {
 	u, err := uuid.NewV7()
