@@ -3,7 +3,9 @@ package uuid
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 
 	"github.com/google/uuid"
@@ -24,6 +26,12 @@ var (
 
 	_ sql.Scanner   = (*UUID)(nil)
 	_ driver.Valuer = Nil
+
+	_ json.Marshaler   = Nil
+	_ json.Unmarshaler = &Nil
+
+	_ encoding.TextMarshaler   = Nil
+	_ encoding.TextUnmarshaler = &Nil
 )
 
 // Scan implements sql.Scanner.
@@ -61,6 +69,26 @@ func (u UUID) Value() (driver.Value, error) {
 		return nil, ErrUUIDError
 	}
 	return vU.String(), nil
+}
+
+// MarshalJSON implements json.Marshaler
+func (u UUID) MarshalJSON() ([]byte, error) {
+	return []byte(u.v), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (u *UUID) UnmarshalJSON(v []byte) error {
+	return u.Scan(v)
+}
+
+// MarshalText implements encoding.TextMarshaler
+func (u UUID) MarshalText() ([]byte, error) {
+	return []byte(u.v), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler
+func (u *UUID) UnmarshalText(v []byte) error {
+	return u.Scan(v)
 }
 
 // String returns the unpadded URL-safe base64 representation of u.
