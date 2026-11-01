@@ -14,22 +14,15 @@ func TestV7(t *testing.T) {
 		t.Fatalf("V7() error = %v", err)
 	}
 
-	decoded, err := base64.RawURLEncoding.DecodeString(string(got))
+	parsed, err := got.ToUUID()
 	if err != nil {
-		t.Fatalf("V7() returned invalid base64 %q: %v", got, err)
-	}
-	if len(decoded) != 16 {
-		t.Fatalf("decoded UUID length = %d, want 16", len(decoded))
-	}
-	parsed, err := googleuuid.FromBytes(decoded)
-	if err != nil {
-		t.Fatalf("decode UUID bytes: %v", err)
+		t.Fatalf("ToUUID() error = %v", err)
 	}
 	if parsed.Version() != 7 {
 		t.Errorf("UUID version = %d, want 7", parsed.Version())
 	}
-	if len(got) != 22 {
-		t.Errorf("encoded UUID length = %d, want 22", len(got))
+	if len(got.String()) != 22 {
+		t.Errorf("encoded UUID length = %d, want 22", len(got.String()))
 	}
 }
 
@@ -55,8 +48,8 @@ func TestValueAndScanRoundTrip(t *testing.T) {
 	if err := got.Scan(canonical); err != nil {
 		t.Fatalf("Scan(string) error = %v", err)
 	}
-	if got != want {
-		t.Errorf("Scan(Value(%q)) = %q, want %q", want, got, want)
+	if got.String() != want.String() {
+		t.Errorf("Scan(Value(%q)) = %q, want %q", want.String(), got.String(), want.String())
 	}
 }
 
@@ -78,8 +71,8 @@ func TestScanByteSlice(t *testing.T) {
 	if err := got.Scan([]byte(canonical)); err != nil {
 		t.Fatalf("Scan([]byte) error = %v", err)
 	}
-	if got != u {
-		t.Errorf("Scan([]byte) = %q, want %q", got, u)
+	if got.String() != u.String() {
+		t.Errorf("Scan([]byte) = %q, want %q", got.String(), u.String())
 	}
 }
 
@@ -126,8 +119,8 @@ func TestValueRejectsInvalidValues(t *testing.T) {
 		name  string
 		value UUID
 	}{
-		{name: "malformed base64", value: UUID("not-valid")},
-		{name: "wrong byte length", value: UUID(base64.RawURLEncoding.EncodeToString([]byte{1, 2}))},
+		{name: "malformed base64", value: UUID{v: "not-valid"}},
+		{name: "wrong byte length", value: UUID{v: base64.RawURLEncoding.EncodeToString([]byte{1, 2})}},
 		{name: "non-v7 UUID", value: nonV7Encoded},
 	}
 	for _, tt := range tests {
@@ -136,5 +129,65 @@ func TestValueRejectsInvalidValues(t *testing.T) {
 				t.Errorf("Value() error = %v, want %v", err, ErrUUIDError)
 			}
 		})
+	}
+}
+
+func TestParseAndFromUUID(t *testing.T) {
+	want, err := V7()
+	if err != nil {
+		t.Fatalf("V7() error = %v", err)
+	}
+
+	got, err := Parse(want.String())
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if got.String() != want.String() {
+		t.Errorf("Parse() = %q, want %q", got.String(), want.String())
+	}
+
+	googleValue, err := want.ToUUID()
+	if err != nil {
+		t.Fatalf("ToUUID() error = %v", err)
+	}
+	fromUUID, err := FromUUID(googleValue)
+	if err != nil {
+		t.Fatalf("FromUUID() error = %v", err)
+	}
+	if fromUUID.String() != want.String() {
+		t.Errorf("FromUUID() = %q, want %q", fromUUID.String(), want.String())
+	}
+}
+
+func TestParseRejectsInvalidValues(t *testing.T) {
+	nonV7, err := googleuuid.NewRandom()
+	if err != nil {
+		t.Fatalf("NewRandom() error = %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "malformed base64", value: "not-valid"},
+		{name: "wrong byte length", value: base64.RawURLEncoding.EncodeToString([]byte{1, 2})},
+		{name: "non-v7 UUID", value: base64.RawURLEncoding.EncodeToString(nonV7[:])},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Parse(tt.value); !errors.Is(err, ErrUUIDError) {
+				t.Errorf("Parse(%q) error = %v, want %v", tt.value, err, ErrUUIDError)
+			}
+		})
+	}
+}
+
+func TestFromUUIDRejectsNonV7(t *testing.T) {
+	nonV7, err := googleuuid.NewRandom()
+	if err != nil {
+		t.Fatalf("NewRandom() error = %v", err)
+	}
+	if _, err := FromUUID(nonV7); !errors.Is(err, ErrUUIDError) {
+		t.Errorf("FromUUID() error = %v, want %v", err, ErrUUIDError)
 	}
 }
