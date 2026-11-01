@@ -1,4 +1,5 @@
 # uuid
+[![Go Reference](https://pkg.go.dev/badge/github.com/muimihq/uuid.svg)](https://pkg.go.dev/github.com/muimihq/uuid)
 
 `github.com/muimihq/uuid` generates UUIDv7 identifiers represented as a compact,
 22-character unpadded URL-safe Base64 string. The `UUID` type hides this
