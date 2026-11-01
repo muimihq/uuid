@@ -1,7 +1,9 @@
 package uuid
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -189,5 +191,55 @@ func TestFromUUIDRejectsNonV7(t *testing.T) {
 	}
 	if _, err := FromUUID(nonV7); !errors.Is(err, ErrUUIDError) {
 		t.Errorf("FromUUID() error = %v, want %v", err, ErrUUIDError)
+	}
+}
+
+func TestJSONMarshaler(t *testing.T) {
+	want, err := V7()
+	if err != nil {
+		t.Fatalf("V7() error = %v", err)
+	}
+
+	encoded, err := json.Marshal(want)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	expected, err := json.Marshal(want.String())
+	if err != nil {
+		t.Fatalf("json.Marshal(string) error = %v", err)
+	}
+	if !bytes.Equal(encoded, expected) {
+		t.Errorf("json.Marshal() = %s, want %s", encoded, expected)
+	}
+
+	var got UUID
+	if err := json.Unmarshal(encoded, &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if got != want {
+		t.Errorf("json.Unmarshal() = %q, want %q", got.String(), want.String())
+	}
+}
+
+func TestTextMarshaler(t *testing.T) {
+	want, err := V7()
+	if err != nil {
+		t.Fatalf("V7() error = %v", err)
+	}
+
+	encoded, err := want.MarshalText()
+	if err != nil {
+		t.Fatalf("MarshalText() error = %v", err)
+	}
+	if string(encoded) != want.String() {
+		t.Errorf("MarshalText() = %q, want %q", encoded, want.String())
+	}
+
+	var got UUID
+	if err := got.UnmarshalText(encoded); err != nil {
+		t.Fatalf("UnmarshalText() error = %v", err)
+	}
+	if got != want {
+		t.Errorf("UnmarshalText() = %q, want %q", got.String(), want.String())
 	}
 }

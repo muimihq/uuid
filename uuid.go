@@ -73,22 +73,48 @@ func (u UUID) Value() (driver.Value, error) {
 
 // MarshalJSON implements json.Marshaler
 func (u UUID) MarshalJSON() ([]byte, error) {
-	return []byte(u.v), nil
+	if _, err := u.ToUUID(); err != nil {
+		return nil, ErrUUIDError
+	}
+	return json.Marshal(u.v)
 }
 
 // UnmarshalJSON implements json.Unmarshaler
 func (u *UUID) UnmarshalJSON(v []byte) error {
-	return u.Scan(v)
+	if u == nil {
+		return ErrUUIDError
+	}
+	var value string
+	if err := json.Unmarshal(v, &value); err != nil {
+		return ErrUUIDError
+	}
+	parsed, err := Parse(value)
+	if err != nil {
+		return err
+	}
+	*u = parsed
+	return nil
 }
 
 // MarshalText implements encoding.TextMarshaler
 func (u UUID) MarshalText() ([]byte, error) {
+	if _, err := u.ToUUID(); err != nil {
+		return nil, ErrUUIDError
+	}
 	return []byte(u.v), nil
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler
 func (u *UUID) UnmarshalText(v []byte) error {
-	return u.Scan(v)
+	if u == nil {
+		return ErrUUIDError
+	}
+	parsed, err := Parse(string(v))
+	if err != nil {
+		return err
+	}
+	*u = parsed
+	return nil
 }
 
 // String returns the unpadded URL-safe base64 representation of u.
